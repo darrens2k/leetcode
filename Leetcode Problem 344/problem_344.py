@@ -7,7 +7,7 @@ def reverseString(s):
     i = 0
 
     # iterate through input string s, but only the first half
-    while (i + 1) < (len(s) / 2):
+    while (i + 1) <= (len(s) / 2):
 
         # gap between current index and the index it should be swapped with would be len(s) - 1 - i (assuming i is the index of the current element)
 
