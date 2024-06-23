@@ -1,0 +1,3 @@
+Given a binary string of 0s and 1s, you can perform the followingoperation a ﬁnite number (possibly zero) of times: Choose a substring of lengthgreater than or equal to K and ﬂip all the bits of the substring. You have to ﬁnd themaximum possible value of K such that after performing this operation a ﬁnitenumber (possibly zero) of times, you can make all the bits of the string equal.
+
+https://leetcode.com/problems/minimum-number-of-k-consecutive-bit-flips/
