@@ -1,75 +1,112 @@
 def maxNumEdgesToRemove(n, edges):
     
     # counter to store number of removed edges
-        removed = 0
-
-        # create adj matrix for bob abd alice
-        bob = [[0 for i in range(n)] for j in range(n)]
-        alice = [[0 for i in range(n)] for j in range(n)]
-        # loop to fill in adj matrices
-        for edge in edges:            
-            # get info about edge
-            edgeType, start, end = edge
-            # if type 1, add to alice
-            if edgeType == 1 and alice[start - 1][end - 1] == 0:
-                alice[start - 1][end - 1] = 1
-                alice[end - 1][start - 1] = 1
-            elif edgeType == 2 and bob[start - 1][end - 1] == 0:
-                bob[start - 1][end - 1] = 1
-                bob[end - 1][start - 1] = 1
-            else:
-                # edge type must be 3    
-                # if 2 nodes have a type 3 edge, any other edge between them can be dropped
-                
-                # check if an edge exists already
-                if alice[start - 1][end - 1] == 1 and bob[start - 1][end - 1] == 1:
-                    # edge already exists
-                    removed += 1
-                else:
-                    # no edge exists yet
-                    alice[start - 1][end - 1] = 1
-                    alice[end - 1][start - 1] = 1
-                    bob[start - 1][end - 1] = 1
-                    bob[end - 1][start - 1] = 1
-        # use dfs to check if there a path to every node from a random starting node
-        # if a node is seen more than once in dfs, one of its edges can be dropped
+    removed = 0
+    
+    # set up arrays for UnionFind (1 instance bob, 1 instance alice)
+    parentAlice = [x for x in range(n)]
+    rankAlice = [1 for x in range(n)]
+    parentBob = [x for x in range(n)]
+    rankBob = [1 for x in range(n)]
+    
+    # set up functions for union find
+    
+    # find function to locate the root parent of a node
+    def find(n, parent):
+        # if the node is parent of itself, it is the root
+        if parent[n] != n:
+            # path compression
+            # update parent of each node in subgraph to be the root
+            parent[n] = find(parent[n], parent)
+        # return root
+        return parent[n]
+    
+    # union function to merge two subgraphs
+    def union(node1, node2, parent, rank):
+        # get the roots of each node
+        r1 = find(node1, parent)
+        r2 = find(node2, parent)
         
-        # create helper function to perform dfs on a graph
-        def dfs(graph):
+        # if roots are the same, nodes are already connected
+        if r1 == r2:
+            return False
+        else:
+            # nodes are not connected yet
             
-            # initialize stacks
-            visited = []
-            unvisited = [0]
-            
-            # counter to see how many times each node has popped up
-            nodes = [0 for i in range(n)]
-            
-            # loop through graph
-            while len(unvisited) > 0:
-                
-                # get current node
-                currentNode = unvisited.pop(0)
-                # mark current node as visited
-                visited.append(currentNode)
-                
-                # get the neighbours of the current node
-                neighbours = []
-                for i in range(n):
-                    if graph[currentNode][i] == 1:
-                        neighbours.append(i)
-                        # increment node counter
-                        nodes[i] += 1
-                        print(nodes, currentNode)
-                # if a neighbour has not been visited yet, add them to unvisited
-                for neighbour in neighbours:
-                    if neighbour not in visited:
-                        unvisited.append(neighbour)
-            print(nodes)
-            return nodes
-        dfs(alice)
-        print(bob)
-        print(alice)
+            # merge larger (higher rank) subgraph into the other
+            if rank[r1] >= rank[r2]:
+                # r1 becomes parent of r2
+                parent[r2] = r1
+                # r1 gains rank of r2
+                rank[r1] += rank[r2]
+            else:
+                # reverse of above scenario
+                parent[r1] = r2
+                rank[r2] += rank[r1]            
+            # return True, we were able to union nodes
+            return True
+    
+    # handle type 3 edges first
+    # these can benefit both graphs
+    for edge in edges:
+        # get info about edge
+        edgeType, start, end = edge
+        # decrement nodes for array indexing
+        start -= 1
+        end -= 1
+        if edgeType == 3:
+            # try to union with alice
+            if not union(start, end, parentAlice, rankAlice):
+                # union failed, increment edges that can be removed
+                removed += 1
+            else:
+                # union for alice was successful
+                # try union for Bob
+                union(start, end, parentBob, rankBob)
+                # dont increment removed if bob fails, alice used the edge    
+    
+    # iterate through edges of type 1 and 2
+    for edge in edges:            
+        # get info about edge
+        edgeType, start, end = edge
+        # decrement nodes for array indexing
+        start -= 1
+        end -= 1
+        
+        # if edge is type 1, work on alice unionfind
+        if edgeType == 1:
+            # try to union with alice
+            if not union(start, end, parentAlice, rankAlice):
+                # union failed, increment edges that can be removed
+                removed += 1
+        # if edge is type 2, work on bob
+        elif edgeType == 2:
+            # try to union with bob
+            if not union(start, end, parentBob, rankBob):
+                # union failed, increment edges to be removed
+                removed += 1
+
+    # need to check if the graphs of bob and alice are connected
+    # parent of each node in the graph should be the same
+    # build a helper function to check this
+    def checkConnected(parent):
+        # get the root of the graph (arbitrarily select first node)
+        root = find(0, parent)
+        # check if every other node has the same root
+        for i in range(1, len(parent)):
+            if find(i, parent) != root:
+                # graph is not connected if they do not share same root
+                return False
+        # if we made it here, the graph is connected
+        return True
+        
+    # check if alice and bob graphs are connected
+    if not checkConnected(parentAlice) or not checkConnected(parentBob):
+        return -1 
+    else:
+        # if we make it here, there are edges to removed
+        # return the sum of edges that can be taken from each of them
         return removed
 
 # Test case
-maxNumEdgesToRemove(4, [[3,1,2],[3,2,3],[1,1,3],[1,2,4],[1,1,2],[2,3,4]])
+maxNumEdgesToRemove(4, [[3,2,3],[1,1,2],[2,3,4]])
